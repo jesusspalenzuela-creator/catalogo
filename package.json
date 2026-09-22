@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "description": "API Node.js + Express + PostgreSQL para catálogo web",
-  "main": "server.js",
+  "main": "serverjs.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node serverjs.js",
+    "dev": "node --watch serverjs.js"
   },
   "engines": {
     "node": ">=18.0.0"
