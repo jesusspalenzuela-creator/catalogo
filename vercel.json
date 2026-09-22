@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "framework": null,
+  "buildCommand": "echo static-frontend",
+  "installCommand": "echo no-install",
+  "outputDirectory": "."
+}
