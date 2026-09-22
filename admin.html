@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administración | Catálogo</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0; padding: 24px;
+      background: #f8fafc; color: #0f172a;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; font-size: 1.5rem; }
+    .sub { color: #64748b; margin: 0 0 24px; font-size: 0.9rem; }
+    .card {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+      padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 2px rgba(15,23,42,.05);
+    }
+    .grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: 0.82rem; font-weight: 600; color: #334155; }
+    input, textarea, select {
+      font-family: inherit; font-size: 0.92rem;
+      padding: 10px 12px; border-radius: 10px;
+      border: 1px solid #cbd5e1; background: #fff; outline: none;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+    }
+    textarea { resize: vertical; min-height: 70px; }
+    button {
+      font-family: inherit; cursor: pointer; border: 0;
+      height: 42px; padding: 0 20px; border-radius: 999px;
+      font-weight: 600; font-size: 0.9rem;
+      background: #2563eb; color: #fff;
+      transition: background .2s, transform .1s;
+    }
+    button:hover { background: #1d4ed8; }
+    button:active { transform: translateY(1px); }
+    button.ghost {
+      background: #fff; color: #1d4ed8; border: 1px solid #bfdbfe;
+    }
+    button.ghost:hover { background: #eff6ff; }
+    button.danger { background: #dc2626; }
+    button.danger:hover { background: #b91c1c; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .checks { display: flex; gap: 18px; margin-top: 4px; }
+    .checks label { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+    .preview {
+      margin-top: 10px; max-width: 220px; border-radius: 10px;
+      border: 1px solid #e2e8f0; display: none;
+    }
+    .preview.show { display: block; }
+    .msg {
+      margin-top: 12px; padding: 10px 14px; border-radius: 10px;
+      font-size: 0.88rem; display: none;
+    }
+    .msg.ok { background: #dcfce7; color: #166534; display: block; }
+    .msg.err { background: #fee2e2; color: #991b1b; display: block; }
+    .tasa {
+      display: inline-block; background: #eff6ff; color: #1d4ed8;
+      padding: 6px 14px; border-radius: 999px;
+      font-weight: 700; font-size: 0.85rem;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td {
+      text-align: left; padding: 10px 8px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    th { color: #64748b; font-weight: 600; font-size: 0.78rem;
+         text-transform: uppercase; letter-spacing: .04em; }
+    td img {
+      width: 44px; height: 44px; object-fit: cover;
+      border-radius: 8px; background: #f1f5f9;
+    }
+    @media (max-width: 640px) {
+      .grid { grid-template-columns: 1fr; }
+      body { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Administración del catálogo</h1>
+    <p class="sub">
+      Tasa BCV actual: <span class="tasa" id="tasaActual">cargando…</span>
+      <button class="ghost" id="btnRefrescarTasa" style="margin-left:10px;height:32px;padding:0 14px;font-size:.8rem;">Actualizar tasa</button>
+    </p>
+
+    <!-- FORMULARIO -->
+    <div class="card">
+      <h3 style="margin-top:0" id="formTitulo">Nuevo producto</h3>
+      <form id="formProducto">
+        <input type="hidden" id="productoId" />
+
+        <div class="grid">
+          <div class="field">
+            <label for="nombre">Nombre</label>
+            <input id="nombre" required />
+          </div>
+
+          <div class="field">
+            <label for="categoria_id">Categoría</label>
+            <select id="categoria_id" required></select>
+          </div>
+
+          <div class="field">
+            <label for="precio_usd">Precio en USD ($)</label>
+            <input id="precio_usd" type="number" step="0.01" min="0" required />
+          </div>
+
+          <div class="field">
+            <label>Precio en Bs (calculado automático)</label>
+            <input id="precio_bs_preview" disabled placeholder="—" />
+          </div>
+
+          <div class="field full">
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion"></textarea>
+          </div>
+
+          <div class="field full">
+            <label for="imagen">Imagen (se convierte a WebP y se comprime)</label>
+            <input id="imagen" type="file" accept="image/*" />
+            <img id="preview" class="preview" alt="preview" />
+          </div>
+
+          <div class="field full checks">
+            <label><input type="checkbox" id="disponible" checked /> Disponible</label>
+            <label><input type="checkbox" id="destacado" /> Destacado</label>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:16px">
+          <button type="submit" id="btnGuardar">Guardar producto</button>
+          <button type="button" class="ghost" id="btnCancelar" style="display:none">Cancelar edición</button>
+        </div>
+
+        <div class="msg" id="mensaje"></div>
+      </form>
+    </div>
+
+    <!-- LISTA -->
+    <div class="card">
+      <h3 style="margin-top:0">Productos existentes</h3>
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>USD</th>
+            <th>Bs</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tablaProductos"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
