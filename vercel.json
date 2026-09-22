@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "installCommand": "echo \"static\"",
+  "buildCommand": "echo \"static\"",
+  "outputDirectory": "."
+}
