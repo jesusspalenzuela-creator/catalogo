@@ -19,7 +19,6 @@
       font-family:'Inter',system-ui,sans-serif; margin:0;
       background:var(--gray-50); color:var(--gray-900); line-height:1.5;
     }
-    /* ---------- LOGIN ---------- */
     .login-view {
       min-height:100vh; display:grid; place-items:center; padding:24px;
       background:linear-gradient(135deg,var(--blue-900) 0%,var(--blue-700) 55%,var(--blue-500) 100%);
@@ -36,7 +35,6 @@
       color:#fff; display:grid; place-items:center;
       font-weight:800; font-size:1.2rem; margin-bottom:18px;
     }
-    /* ---------- APP ---------- */
     .app-view { display:none; }
     .app-view.visible { display:block; }
     .login-view.hidden { display:none; }
@@ -60,7 +58,6 @@
 
     .container { max-width:1200px; margin:0 auto; padding:24px 20px 60px; }
 
-    /* ---------- TABS ---------- */
     .tabs { display:flex; gap:4px; margin-bottom:22px; background:#fff;
             border:1px solid var(--gray-200); border-radius:12px; padding:6px; }
     .tab {
@@ -72,7 +69,6 @@
     .panel { display:none; }
     .panel.active { display:block; }
 
-    /* ---------- CARD ---------- */
     .card {
       background:#fff; border:1px solid var(--gray-200); border-radius:14px;
       padding:22px; margin-bottom:20px; box-shadow:var(--shadow);
@@ -80,7 +76,6 @@
     .card h2 { margin:0 0 4px; font-size:1.1rem; letter-spacing:-.01em; }
     .card .sub { margin:0 0 18px; color:var(--gray-500); font-size:.85rem; }
 
-    /* ---------- FORM ---------- */
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     .field { display:flex; flex-direction:column; gap:6px; }
     .field.full { grid-column:1 / -1; }
@@ -124,7 +119,6 @@
     .msg.ok { background:#dcfce7; color:#166534; display:block; }
     .msg.err { background:#fee2e2; color:#991b1b; display:block; }
 
-    /* ---------- TABLA ---------- */
     table { width:100%; border-collapse:collapse; font-size:.88rem; }
     th, td { text-align:left; padding:12px 10px; border-bottom:1px solid var(--gray-100); }
     th { color:var(--gray-500); font-weight:600; font-size:.75rem;
@@ -133,7 +127,6 @@
     td img { width:46px; height:46px; object-fit:cover; border-radius:8px; background:var(--gray-100); }
     .empty-row { text-align:center; color:var(--gray-400); padding:34px 10px; font-size:.9rem; }
 
-    /* ---------- TASA ---------- */
     .tasa-box {
       display:flex; align-items:center; justify-content:space-between;
       gap:16px; padding:18px 20px; border-radius:12px;
@@ -149,14 +142,13 @@
       .grid { grid-template-columns:1fr; }
       .tabs { flex-wrap:wrap; }
       .tab { flex:1 0 40%; }
-      th:nth-child(2), td:nth-child(2) { display:none; } /* esconde nombre en móvil */
+      th:nth-child(2), td:nth-child(2) { display:none; }
       .container { padding:16px 12px 40px; }
     }
   </style>
 </head>
 <body>
 
-<!-- ================= LOGIN ================= -->
 <div class="login-view" id="loginView">
   <div class="login-card">
     <div class="logo">A</div>
@@ -177,7 +169,6 @@
   </div>
 </div>
 
-<!-- ================= APP ================= -->
 <div class="app-view" id="appView">
   <header class="topbar">
     <div class="topbar__inner">
@@ -196,10 +187,11 @@
     <div class="tabs">
       <button class="tab active" data-tab="productos">Productos</button>
       <button class="tab" data-tab="categorias">Categorías</button>
-      <button class="tab" data-tab="config">Configuración</button>
+      <button class="tab" data-tab="apariencia">Apariencia</button>
+      <button class="tab" data-tab="config">Tasa BCV</button>
     </div>
 
-    <!-- ================= PRODUCTOS ================= -->
+    <!-- PRODUCTOS -->
     <div class="panel active" id="panel-productos">
       <div class="card">
         <h2 id="formTitulo">Nuevo producto</h2>
@@ -264,7 +256,7 @@
       </div>
     </div>
 
-    <!-- ================= CATEGORÍAS ================= -->
+    <!-- CATEGORÍAS -->
     <div class="panel" id="panel-categorias">
       <div class="card">
         <h2>Nueva categoría</h2>
@@ -289,7 +281,35 @@
       </div>
     </div>
 
-    <!-- ================= CONFIG ================= -->
+    <!-- APARIENCIA -->
+    <div class="panel" id="panel-apariencia">
+      <div class="card">
+        <h2>Identidad del negocio</h2>
+        <p class="sub">Estos textos se muestran en el catálogo público.</p>
+        <form id="formApariencia">
+          <div class="grid">
+            <div class="field full">
+              <label for="cfgNombre">Nombre del negocio</label>
+              <input id="cfgNombre" maxlength="60" required />
+            </div>
+            <div class="field full">
+              <label for="cfgTitulo">Título del banner principal</label>
+              <input id="cfgTitulo" maxlength="120" />
+            </div>
+            <div class="field full">
+              <label for="cfgTexto">Texto del banner principal</label>
+              <textarea id="cfgTexto" maxlength="280"></textarea>
+            </div>
+          </div>
+          <div class="row" style="margin-top:18px">
+            <button type="submit">Guardar cambios</button>
+          </div>
+          <div class="msg" id="aparienciaMsg"></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- TASA -->
     <div class="panel" id="panel-config">
       <div class="card">
         <h2>Tasa BCV</h2>
