@@ -21,6 +21,8 @@
       hero_texto: 'Explora nuestro catálogo con productos seleccionados, precios actualizados y envíos a todo el país.',
       logo_url: '',
       whatsapp_number: '',
+      color_primario: '#2563eb',
+      color_oscuro: '#1e3a8a',
     },
   };
 
@@ -49,8 +51,8 @@
     footerNombre:  document.getElementById('footerNombre'),
     toast:         document.getElementById('toast'),
     docTitle:      document.querySelector('title'),
+    themeMeta:     document.querySelector('meta[name="theme-color"]'),
 
-    // modal de pedido
     checkoutOverlay: document.getElementById('checkoutOverlay'),
     checkoutModal:   document.getElementById('checkoutModal'),
     checkoutBody:    document.getElementById('checkoutBody'),
@@ -60,6 +62,10 @@
     checkoutCount:   document.getElementById('checkoutCount'),
     checkoutTotalBs: document.getElementById('checkoutTotalBs'),
     checkoutTotalUsd:document.getElementById('checkoutTotalUsd'),
+
+    imageZoom:      document.getElementById('imageZoom'),
+    imageZoomImg:   document.getElementById('imageZoomImg'),
+    imageZoomClose: document.getElementById('imageZoomClose'),
   };
 
   /* ---------------- UTILIDADES ---------------- */
@@ -84,10 +90,19 @@
       t = setTimeout(() => fn.apply(this, args), ms);
     };
   }
+  function mixColor(hex, target, ratio) {
+    const parse = (h) => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+    try {
+      const [r, g, b] = parse(hex);
+      const [tr, tg, tb] = parse(target);
+      const nr = Math.round(r + (tr - r) * ratio);
+      const ng = Math.round(g + (tg - g) * ratio);
+      const nb = Math.round(b + (tb - b) * ratio);
+      return '#' + [nr, ng, nb].map((x) => x.toString(16).padStart(2, '0')).join('');
+    } catch { return hex; }
+  }
 
-  /* ---------------- PLACEHOLDER GENÉRICO ----------------
-     Bolsa de compras genérica: sirve para cualquier negocio.
-     ------------------------------------------------------ */
+  /* ---------------- PLACEHOLDER GENÉRICO (caja 3D) ---------------- */
   const PLACEHOLDER_IMG =
     'data:image/svg+xml;utf8,' +
     encodeURIComponent(
@@ -99,11 +114,13 @@
           </linearGradient>
         </defs>
         <rect width="400" height="300" fill="url(#g)"/>
-        <g transform="translate(148,100)" fill="none" stroke="#94a3b8" stroke-width="3"
-           stroke-linejoin="round" stroke-linecap="round">
-          <rect x="0" y="24" width="104" height="88" rx="10"/>
-          <path d="M26 24 V14 a26 26 0 0 1 52 0 V24"/>
-          <path d="M22 44 L82 44" stroke-opacity=".45"/>
+        <g stroke-linejoin="round" stroke-linecap="round">
+          <path d="M 200 92 L 268 128 L 268 196 L 200 232 L 132 196 L 132 128 Z"
+                fill="#dbeafe" stroke="#94a3b8" stroke-width="3"/>
+          <path d="M 132 128 L 200 164 L 268 128"
+                fill="#eff6ff" stroke="#94a3b8" stroke-width="3"/>
+          <path d="M 200 164 L 200 232"
+                stroke="#94a3b8" stroke-width="3" stroke-opacity="0.55"/>
         </g>
       </svg>`
     );
@@ -159,11 +176,27 @@
     }
   }
 
+  function aplicarColores() {
+    const c = state.config;
+    const primario = c.color_primario || '#2563eb';
+    const oscuro = c.color_oscuro || '#1e3a8a';
+    const root = document.documentElement.style;
+
+    root.setProperty('--blue-500', primario);
+    root.setProperty('--blue-600', primario);
+    root.setProperty('--blue-700', mixColor(primario, '#000000', 0.15));
+    root.setProperty('--blue-900', oscuro);
+    root.setProperty('--blue-200', mixColor(primario, '#ffffff', 0.72));
+    root.setProperty('--blue-100', mixColor(primario, '#ffffff', 0.86));
+    root.setProperty('--blue-50',  mixColor(primario, '#ffffff', 0.94));
+
+    if (el.themeMeta) el.themeMeta.setAttribute('content', oscuro);
+  }
+
   function aplicarConfig() {
     const c = state.config;
     if (el.brandName) el.brandName.textContent = c.nombre_negocio || 'Mi Negocio';
 
-    // Logo o letra inicial
     if (el.brandMark) {
       if (c.logo_url) {
         el.brandMark.innerHTML = `<img src="${escapeHtml(c.logo_url)}" alt="Logo">`;
@@ -178,16 +211,17 @@
     if (el.heroTexto) el.heroTexto.textContent = c.hero_texto || '';
     if (el.footerNombre) el.footerNombre.textContent = c.nombre_negocio || 'Mi Negocio';
     if (el.docTitle) el.docTitle.textContent = (c.nombre_negocio || 'Catálogo') + ' | Catálogo';
+
+    aplicarColores();
   }
 
   async function cargarCategorias() { state.categorias = await fetchJSON('/api/categorias'); }
   async function cargarProductos()  { state.productos  = await fetchJSON('/api/productos'); }
 
-  /* ---------------- RENDER CATEGORÍAS ---------------- */
+  /* ---------------- CATEGORÍAS ---------------- */
   function renderCategorias() {
     const items = [{ id: 'all', nombre: 'Todos' }];
     state.categorias.forEach((cat) => items.push({ id: cat.id, nombre: cat.nombre }));
-
     el.categoriesBar.innerHTML = items.map((it) => {
       const activa = String(state.categoriaActiva) === String(it.id);
       return `<button type="button" class="chip${activa ? ' is-active' : ''}"
@@ -195,7 +229,7 @@
     }).join('');
   }
 
-  /* ---------------- RENDER PRODUCTOS ---------------- */
+  /* ---------------- PRODUCTOS ---------------- */
   function productosFiltrados() {
     const q = state.busqueda.trim().toLowerCase();
     const cat = state.categoriaActiva;
@@ -213,9 +247,10 @@
     const cat = p.categoria_nombre ? escapeHtml(p.categoria_nombre) : 'General';
     const destacado = p.destacado ? '<span class="card__badge">Destacado</span>' : '';
     const desc = p.descripcion ? escapeHtml(p.descripcion) : '';
+    const tieneImagen = !!p.imagen_url;
     return `
       <article class="card" data-id="${escapeHtml(p.id)}">
-        <div class="card__media">
+        <div class="card__media"${tieneImagen ? ' data-zoom="1"' : ''}>
           <img src="${imagen}" alt="${escapeHtml(p.nombre)}" loading="lazy"
                onerror="this.onerror=null;this.src='${PLACEHOLDER_IMG}'" />
           ${destacado}
@@ -347,7 +382,7 @@
     el.cartTotalUsd.textContent = fmtUsd(t.usd);
   }
 
-  /* ---------------- DRAWER CARRITO ---------------- */
+  /* ---------------- DRAWER ---------------- */
   function abrirCarrito() {
     el.cartOverlay.hidden = false;
     requestAnimationFrame(() => {
@@ -367,7 +402,7 @@
     }, 250);
   }
 
-  /* ---------------- MODAL DE PEDIDO ---------------- */
+  /* ---------------- MODAL PEDIDO ---------------- */
   function renderModalPedido() {
     el.checkoutBody.innerHTML = state.carrito.map((it) => {
       const img = it.imagen_url ? escapeHtml(it.imagen_url) : PLACEHOLDER_IMG;
@@ -399,10 +434,8 @@
     if (!state.carrito.length) return;
     renderModalPedido();
     cerrarCarrito();
-
     el.checkoutOverlay.hidden = false;
     el.checkoutModal.hidden = false;
-
     requestAnimationFrame(() => {
       el.checkoutOverlay.classList.add('is-open');
       el.checkoutModal.classList.add('is-open');
@@ -424,23 +457,37 @@
 
   function enviarPedidoWhatsApp() {
     const numero = (state.config.whatsapp_number || WHATSAPP_FALLBACK || '').replace(/\D/g, '');
-
     const lineas = state.carrito.map((it) =>
       `• ${it.nombre} x${it.cantidad} — ${fmtBs(it.precio_bs * it.cantidad)} / ${fmtUsd(it.precio_usd * it.cantidad)}`
     ).join('\n');
-
     const t = totalCarrito();
-    const mensaje =
-      `Hola, quiero hacer el siguiente pedido:\n\n${lineas}\n\n` +
-      `Total: ${fmtBs(t.bs)} / ${fmtUsd(t.usd)}`;
-
+    const mensaje = `Hola, quiero hacer el siguiente pedido:\n\n${lineas}\n\nTotal: ${fmtBs(t.bs)} / ${fmtUsd(t.usd)}`;
     if (numero) {
-      const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
-      window.open(url, '_blank', 'noopener');
+      window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`, '_blank', 'noopener');
       cerrarModalPedido();
     } else {
       alert('El número de WhatsApp no está configurado. Contacta al negocio.');
     }
+  }
+
+  /* ---------------- ZOOM DE IMAGEN ---------------- */
+  function abrirZoom(src) {
+    if (!el.imageZoom || !el.imageZoomImg) return;
+    el.imageZoomImg.src = src;
+    el.imageZoom.hidden = false;
+    requestAnimationFrame(() => el.imageZoom.classList.add('is-open'));
+    document.body.style.overflow = 'hidden';
+  }
+  function cerrarZoom() {
+    if (!el.imageZoom) return;
+    el.imageZoom.classList.remove('is-open');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+      if (!el.imageZoom.classList.contains('is-open')) {
+        el.imageZoom.hidden = true;
+        el.imageZoomImg.src = '';
+      }
+    }, 300);
   }
 
   /* ---------------- EVENTOS ---------------- */
@@ -454,9 +501,14 @@
     });
 
     el.grid.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-add]');
-      if (!btn) return;
-      agregarAlCarrito(btn.dataset.add);
+      const addBtn = e.target.closest('[data-add]');
+      if (addBtn) { agregarAlCarrito(addBtn.dataset.add); return; }
+
+      const media = e.target.closest('.card__media[data-zoom]');
+      if (media) {
+        const img = media.querySelector('img');
+        if (img && img.src && !img.src.startsWith('data:')) abrirZoom(img.src);
+      }
     });
 
     el.search.addEventListener('input', debounce((e) => {
@@ -478,16 +530,18 @@
     });
 
     el.cartCheckout.addEventListener('click', abrirModalPedido);
-
-    // Modal de pedido
     el.checkoutClose.addEventListener('click', cerrarModalPedido);
     el.checkoutCancel.addEventListener('click', cerrarModalPedido);
     el.checkoutOverlay.addEventListener('click', cerrarModalPedido);
     el.checkoutConfirm.addEventListener('click', enviarPedidoWhatsApp);
 
+    if (el.imageZoomClose) el.imageZoomClose.addEventListener('click', (e) => { e.stopPropagation(); cerrarZoom(); });
+    if (el.imageZoom) el.imageZoom.addEventListener('click', cerrarZoom);
+
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      if (el.checkoutModal.classList.contains('is-open')) cerrarModalPedido();
+      if (el.imageZoom && el.imageZoom.classList.contains('is-open')) cerrarZoom();
+      else if (el.checkoutModal.classList.contains('is-open')) cerrarModalPedido();
       else if (el.cartDrawer.classList.contains('is-open')) cerrarCarrito();
     });
   }
