@@ -168,6 +168,43 @@
     </div>
   </div>
 
+  <!-- Modal de descripción completa -->
+  <div id="descOverlay" class="modal-overlay" hidden></div>
+
+  <div id="descModal" class="modal modal--desc" role="dialog" aria-modal="true" aria-labelledby="descTitle" hidden>
+    <div class="modal__header">
+      <div>
+        <h3 class="modal__title" id="descTitle">Producto</h3>
+        <p class="modal__subtitle" id="descCat">Categoría</p>
+      </div>
+      <button class="modal__close" id="descClose" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal__body">
+      <img id="descImg" class="desc-img" src="" alt="" />
+      <div class="desc-prices">
+        <span class="desc-price-bs" id="descPriceBs">Bs. 0,00</span>
+        <span class="desc-price-usd" id="descPriceUsd">$0,00</span>
+      </div>
+      <p class="desc-full" id="descText"></p>
+    </div>
+
+    <div class="modal__footer">
+      <div class="desc-actions">
+        <div class="qty-control qty-control--lg">
+          <button type="button" id="descQtyDec" aria-label="Disminuir">−</button>
+          <input type="number" id="descQtyInput" value="1" min="1" inputmode="numeric" />
+          <button type="button" id="descQtyInc" aria-label="Aumentar">+</button>
+        </div>
+        <button class="btn btn--primary btn--block" id="descAdd">Agregar al carrito</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de zoom de imagen -->
   <div id="imageZoom" class="image-zoom" hidden>
     <button class="image-zoom__close" id="imageZoomClose" aria-label="Cerrar">
