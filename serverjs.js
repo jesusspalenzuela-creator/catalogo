@@ -153,6 +153,8 @@ async function leerConfig() {
       'Explora nuestro catálogo con productos seleccionados, precios actualizados y envíos a todo el país.',
     logo_url: map.logo_url || '',
     whatsapp_number: map.whatsapp_number || '',
+    color_primario: map.color_primario || '#2563eb',
+    color_oscuro: map.color_oscuro || '#1e3a8a',
     tasa_bcv: parseFloat(map.tasa_bcv || '0') || 0,
   };
 }
@@ -368,7 +370,11 @@ app.get('/api/admin/config', adminAuth, asyncHandler(async (req, res) => {
 }));
 
 app.put('/api/admin/config', adminAuth, asyncHandler(async (req, res) => {
-  const { nombre_negocio, hero_titulo, hero_texto, logo_url, whatsapp_number } = req.body || {};
+  const {
+    nombre_negocio, hero_titulo, hero_texto,
+    logo_url, whatsapp_number,
+    color_primario, color_oscuro,
+  } = req.body || {};
 
   if (nombre_negocio !== undefined) {
     if (!String(nombre_negocio).trim()) {
@@ -380,8 +386,13 @@ app.put('/api/admin/config', adminAuth, asyncHandler(async (req, res) => {
   if (hero_texto !== undefined) await guardarConfig('hero_texto', String(hero_texto).trim());
   if (logo_url !== undefined) await guardarConfig('logo_url', String(logo_url).trim());
   if (whatsapp_number !== undefined) {
-    const soloDigitos = String(whatsapp_number).replace(/\D/g, '');
-    await guardarConfig('whatsapp_number', soloDigitos);
+    await guardarConfig('whatsapp_number', String(whatsapp_number).replace(/\D/g, ''));
+  }
+  if (color_primario !== undefined && /^#[0-9a-f]{6}$/i.test(color_primario)) {
+    await guardarConfig('color_primario', color_primario);
+  }
+  if (color_oscuro !== undefined && /^#[0-9a-f]{6}$/i.test(color_oscuro)) {
+    await guardarConfig('color_oscuro', color_oscuro);
   }
 
   const cfg = await leerConfig();
