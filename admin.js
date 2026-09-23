@@ -8,6 +8,17 @@
   const TOKEN_KEY = 'admin_token';
   const USER_KEY = 'admin_user';
 
+  const PRESETS = [
+    { nombre: 'Azul',      primario: '#2563eb', oscuro: '#1e3a8a' },
+    { nombre: 'Esmeralda', primario: '#059669', oscuro: '#064e3b' },
+    { nombre: 'Violeta',   primario: '#7c3aed', oscuro: '#4c1d95' },
+    { nombre: 'Rojo',      primario: '#dc2626', oscuro: '#7f1d1d' },
+    { nombre: 'Naranja',   primario: '#ea580c', oscuro: '#7c2d12' },
+    { nombre: 'Rosa',      primario: '#db2777', oscuro: '#831843' },
+    { nombre: 'Grafito',   primario: '#475569', oscuro: '#0f172a' },
+    { nombre: 'Cian',      primario: '#0891b2', oscuro: '#164e63' },
+  ];
+
   const el = {
     loginView: document.getElementById('loginView'),
     appView: document.getElementById('appView'),
@@ -51,6 +62,23 @@
     btnQuitarLogo: document.getElementById('btnQuitarLogo'),
     aparienciaMsg: document.getElementById('aparienciaMsg'),
 
+    presets: document.getElementById('presets'),
+    colorPrimario: document.getElementById('colorPrimario'),
+    colorPrimarioHex: document.getElementById('colorPrimarioHex'),
+    colorOscuro: document.getElementById('colorOscuro'),
+    colorOscuroHex: document.getElementById('colorOscuroHex'),
+    btnGuardarColores: document.getElementById('btnGuardarColores'),
+    btnResetColores: document.getElementById('btnResetColores'),
+    coloresMsg: document.getElementById('coloresMsg'),
+    cpMark: document.getElementById('cpMark'),
+    cpNombre: document.getElementById('cpNombre'),
+    cpCart: document.getElementById('cpCart'),
+    cpHero: document.getElementById('cpHero'),
+    cpTitulo: document.getElementById('cpTitulo'),
+    cpHeroBtn: document.getElementById('cpHeroBtn'),
+    cpCat: document.getElementById('cpCat'),
+    cpBtn: document.getElementById('cpBtn'),
+
     tasaValor: document.getElementById('tasaValor'),
     tasaUpdated: document.getElementById('tasaUpdated'),
     tasaManual: document.getElementById('tasaManual'),
@@ -83,6 +111,17 @@
     elMsg.textContent = text;
     elMsg.className = 'msg ' + (ok ? 'ok' : 'err');
     setTimeout(() => { elMsg.className = 'msg'; }, 4000);
+  }
+
+  /* --- Mezcla de colores --- */
+  function mixColor(hex, target, ratio) {
+    const parse = (h) => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+    const [r, g, b] = parse(hex);
+    const [tr, tg, tb] = parse(target);
+    const nr = Math.round(r + (tr - r) * ratio);
+    const ng = Math.round(g + (tg - g) * ratio);
+    const nb = Math.round(b + (tb - b) * ratio);
+    return '#' + [nr, ng, nb].map((x) => x.toString(16).padStart(2, '0')).join('');
   }
 
   async function api(path, opts = {}) {
@@ -182,21 +221,21 @@
     el.cfgWhatsapp.value = cfg.whatsapp_number || '';
     logoActual = cfg.logo_url || '';
     renderLogoPreview();
+
+    // colores
+    setColoresUI(cfg.color_primario || '#2563eb', cfg.color_oscuro || '#1e3a8a');
   }
 
   function renderLogoPreview() {
-    if (logoActual) {
-      el.logoPreview.innerHTML = `<img src="${logoActual}" alt="">`;
-    } else {
-      el.logoPreview.textContent = (el.cfgNombre.value || 'M').trim().charAt(0).toUpperCase() || 'M';
-    }
+    if (logoActual) el.logoPreview.innerHTML = `<img src="${logoActual}" alt="">`;
+    else el.logoPreview.textContent = (el.cfgNombre.value || 'M').trim().charAt(0).toUpperCase() || 'M';
   }
-
   el.cfgNombre.addEventListener('input', renderLogoPreview);
 
   async function cargarTodo() {
     try {
       await Promise.all([cargarCategorias(), cargarTasa(), cargarProductos(), cargarConfig()]);
+      renderPresets();
     } catch (err) {
       showMsg(el.mensaje, 'Error al cargar datos: ' + err.message, false);
     }
@@ -442,6 +481,90 @@
       await cargarConfig();
     } catch (err) {
       showMsg(el.aparienciaMsg, 'Error: ' + err.message, false);
+    }
+  });
+
+  /* -------- COLORES -------- */
+  function renderPresets() {
+    const actualPrimario = el.colorPrimario.value.toLowerCase();
+    el.presets.innerHTML = PRESETS.map((p, i) => `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+        <button class="preset" data-preset="${i}" title="${p.nombre}">
+          <span class="preset__inner">
+            <span style="background:${p.oscuro}"></span>
+            <span style="background:${p.primario}"></span>
+          </span>
+        </button>
+        <span class="preset__name">${p.nombre}</span>
+      </div>
+    `).join('');
+
+    el.presets.querySelectorAll('.preset').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = PRESETS[Number(btn.dataset.preset)];
+        setColoresUI(p.primario, p.oscuro);
+      });
+    });
+  }
+
+  function setColoresUI(primario, oscuro) {
+    el.colorPrimario.value = primario;
+    el.colorPrimarioHex.value = primario.toUpperCase();
+    el.colorOscuro.value = oscuro;
+    el.colorOscuroHex.value = oscuro.toUpperCase();
+    actualizarVistaPrevia();
+  }
+
+  function actualizarVistaPrevia() {
+    const primario = el.colorPrimario.value;
+    const oscuro = el.colorOscuro.value;
+
+    el.cpMark.style.background = `linear-gradient(135deg, ${primario}, ${oscuro})`;
+    el.cpMark.textContent = (el.cfgNombre.value || 'M').trim().charAt(0).toUpperCase();
+    el.cpNombre.textContent = el.cfgNombre.value || 'Mi Negocio';
+    el.cpCart.style.background = mixColor(primario, '#ffffff', 0.9);
+    el.cpCart.style.boxShadow = `inset 0 0 0 6px ${primario}`;
+    el.cpHero.style.background = `linear-gradient(135deg, ${oscuro} 0%, ${mixColor(primario, '#000000', 0.1)} 55%, ${primario} 100%)`;
+    el.cpTitulo.textContent = el.cfgTitulo.value || 'Todo lo que necesitas, en un solo lugar';
+    el.cpHeroBtn.style.color = oscuro;
+    el.cpCat.style.color = primario;
+    el.cpBtn.style.background = primario;
+
+    el.colorPrimarioHex.value = primario.toUpperCase();
+    el.colorOscuroHex.value = oscuro.toUpperCase();
+  }
+
+  el.colorPrimario.addEventListener('input', actualizarVistaPrevia);
+  el.colorOscuro.addEventListener('input', actualizarVistaPrevia);
+
+  el.colorPrimarioHex.addEventListener('input', (e) => {
+    const v = e.target.value;
+    if (/^#[0-9a-f]{6}$/i.test(v)) el.colorPrimario.value = v;
+  });
+  el.colorOscuroHex.addEventListener('input', (e) => {
+    const v = e.target.value;
+    if (/^#[0-9a-f]{6}$/i.test(v)) el.colorOscuro.value = v;
+  });
+
+  el.cfgNombre.addEventListener('input', actualizarVistaPrevia);
+  el.cfgTitulo.addEventListener('input', actualizarVistaPrevia);
+
+  el.btnResetColores.addEventListener('click', () => {
+    setColoresUI('#2563eb', '#1e3a8a');
+  });
+
+  el.btnGuardarColores.addEventListener('click', async () => {
+    try {
+      await api('/api/admin/config', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          color_primario: el.colorPrimario.value,
+          color_oscuro: el.colorOscuro.value,
+        }),
+      });
+      showMsg(el.coloresMsg, 'Colores guardados');
+    } catch (err) {
+      showMsg(el.coloresMsg, 'Error: ' + err.message, false);
     }
   });
 
