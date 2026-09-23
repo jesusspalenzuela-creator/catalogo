@@ -8,7 +8,7 @@
   const API_URL = String(CONFIG.API_URL || 'http://localhost:3000').replace(/\/+$/, '');
   const WHATSAPP_FALLBACK = String(CONFIG.WHATSAPP_NUMBER || '').replace(/\D/g, '');
   const STORAGE_KEY = 'catalogo_carrito_v1';
-  const DESCRIPCION_UMBRAL = 90; // si la descripción supera esta longitud, aparece "Leer más"
+  const DESCRIPCION_UMBRAL = 55; // si la descripción supera esta longitud, aparece "Leer más"
 
   const state = {
     productos: [],
@@ -16,7 +16,7 @@
     categoriaActiva: 'all',
     busqueda: '',
     carrito: [],
-    productoDescActual: null, // producto abierto en el modal de descripción
+    productoDescActual: null,
     config: {
       nombre_negocio: 'Mi Negocio',
       hero_titulo: 'Todo lo que necesitas, en un solo lugar',
@@ -510,7 +510,7 @@
     }
   }
 
-  /* ---------------- MODAL DE DESCRIPCIÓN ---------------- */
+  /* ---------------- MODAL DESCRIPCIÓN ---------------- */
   function abrirDescModal(productoId) {
     const p = state.productos.find((x) => String(x.id) === String(productoId));
     if (!p) return;
@@ -547,7 +547,7 @@
     }, 280);
   }
 
-  /* ---------------- ZOOM DE IMAGEN ---------------- */
+  /* ---------------- ZOOM ---------------- */
   function abrirZoom(src) {
     if (!el.imageZoom || !el.imageZoomImg) return;
     el.imageZoomImg.src = src;
@@ -567,7 +567,7 @@
     }, 300);
   }
 
-  /* ---------------- HELPERS DE CANTIDAD EN TARJETA ---------------- */
+  /* ---------------- HELPERS QTY EN TARJETA ---------------- */
   function getCardQty(id) {
     const input = document.querySelector(`[data-card-qty="${CSS.escape(String(id))}"]`);
     return input ? clampQty(input.value) : 1;
@@ -579,7 +579,6 @@
 
   /* ---------------- EVENTOS ---------------- */
   function bindEventos() {
-    // Categorías
     el.categoriesBar.addEventListener('click', (e) => {
       const btn = e.target.closest('.chip');
       if (!btn) return;
@@ -588,7 +587,6 @@
       window.scrollTo({ top: el.catalogTitle.offsetTop - 90, behavior: 'smooth' });
     });
 
-    // Delegación en el grid
     el.grid.addEventListener('click', (e) => {
       const addBtn   = e.target.closest('[data-add]');
       const incBtn   = e.target.closest('[data-card-inc]');
@@ -598,25 +596,13 @@
       if (addBtn) {
         const id = addBtn.dataset.add;
         agregarAlCarrito(id, getCardQty(id));
-        setCardQty(id, 1); // resetear el input tras agregar
+        setCardQty(id, 1);
         return;
       }
-      if (incBtn) {
-        const id = incBtn.dataset.cardInc;
-        setCardQty(id, getCardQty(id) + 1);
-        return;
-      }
-      if (decBtn) {
-        const id = decBtn.dataset.cardDec;
-        setCardQty(id, getCardQty(id) - 1);
-        return;
-      }
-      if (moreBtn) {
-        abrirDescModal(moreBtn.dataset.readmore);
-        return;
-      }
+      if (incBtn) { setCardQty(incBtn.dataset.cardInc, getCardQty(incBtn.dataset.cardInc) + 1); return; }
+      if (decBtn) { setCardQty(decBtn.dataset.cardDec, getCardQty(decBtn.dataset.cardDec) - 1); return; }
+      if (moreBtn) { abrirDescModal(moreBtn.dataset.readmore); return; }
 
-      // Zoom de imagen
       const media = e.target.closest('.card__media[data-zoom]');
       if (media) {
         const img = media.querySelector('img');
@@ -624,20 +610,17 @@
       }
     });
 
-    // Cambio manual en los inputs de cantidad de las tarjetas
     el.grid.addEventListener('change', (e) => {
       const input = e.target.closest('[data-card-qty]');
       if (!input) return;
       input.value = String(clampQty(input.value));
     });
 
-    // Buscador
     el.search.addEventListener('input', debounce((e) => {
       state.busqueda = e.target.value || '';
       renderProductos();
     }, 180));
 
-    // Carrito
     el.cartButton.addEventListener('click', abrirCarrito);
     el.cartClose.addEventListener('click', cerrarCarrito);
     el.cartOverlay.addEventListener('click', cerrarCarrito);
@@ -657,7 +640,6 @@
     el.checkoutOverlay.addEventListener('click', cerrarModalPedido);
     el.checkoutConfirm.addEventListener('click', enviarPedidoWhatsApp);
 
-    // Modal de descripción
     el.descClose.addEventListener('click', cerrarDescModal);
     el.descOverlay.addEventListener('click', cerrarDescModal);
     el.descQtyInc.addEventListener('click', () => {
@@ -675,11 +657,9 @@
       cerrarDescModal();
     });
 
-    // Zoom
     if (el.imageZoomClose) el.imageZoomClose.addEventListener('click', (e) => { e.stopPropagation(); cerrarZoom(); });
     if (el.imageZoom) el.imageZoom.addEventListener('click', cerrarZoom);
 
-    // Escape cierra lo que esté abierto (en orden)
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       if (el.imageZoom && el.imageZoom.classList.contains('is-open')) cerrarZoom();
