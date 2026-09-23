@@ -758,3 +758,62 @@ input { font-family: inherit; }
   .card__title { font-size: 0.82rem; }
   .card__price-bs { font-size: 0.9rem; }
 }
+
+/* =========================================================
+   TOAST — notificación flotante
+   ========================================================= */
+.toast {
+  position: fixed;
+  top: 90px;
+  right: 20px;
+  z-index: 200;
+  background: #fff;
+  color: var(--gray-900);
+  border: 1px solid var(--gray-200);
+  border-left: 4px solid var(--blue-600);
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+  font-size: 0.9rem;
+  font-weight: 500;
+  max-width: 340px;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  transform: translateX(calc(100% + 40px));
+  opacity: 0;
+  transition: transform .35s cubic-bezier(.22,.61,.36,1), opacity .25s;
+  pointer-events: none;
+}
+.toast.show {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.toast__icon {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--blue-600);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  margin-top: 1px;
+}
+.toast strong { font-weight: 700; color: var(--blue-900); }
+
+@media (max-width: 620px) {
+  .toast {
+    top: auto;
+    bottom: 20px;
+    right: 12px;
+    left: 12px;
+    max-width: none;
+    transform: translateY(calc(100% + 40px));
+  }
+  .toast.show { transform: translateY(0); }
+}
