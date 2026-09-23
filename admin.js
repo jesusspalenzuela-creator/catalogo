@@ -18,7 +18,6 @@
     userName: document.getElementById('userName'),
     btnLogout: document.getElementById('btnLogout'),
 
-    // productos
     form: document.getElementById('formProducto'),
     formTitulo: document.getElementById('formTitulo'),
     productoId: document.getElementById('productoId'),
@@ -37,13 +36,17 @@
     tablaProductos: document.getElementById('tablaProductos'),
     productosCount: document.getElementById('productosCount'),
 
-    // categorias
     formCategoria: document.getElementById('formCategoria'),
     categoriaNombre: document.getElementById('categoriaNombre'),
     categoriaMsg: document.getElementById('categoriaMsg'),
     tablaCategorias: document.getElementById('tablaCategorias'),
 
-    // config
+    formApariencia: document.getElementById('formApariencia'),
+    cfgNombre: document.getElementById('cfgNombre'),
+    cfgTitulo: document.getElementById('cfgTitulo'),
+    cfgTexto: document.getElementById('cfgTexto'),
+    aparienciaMsg: document.getElementById('aparienciaMsg'),
+
     tasaValor: document.getElementById('tasaValor'),
     tasaUpdated: document.getElementById('tasaUpdated'),
     tasaManual: document.getElementById('tasaManual'),
@@ -56,19 +59,10 @@
   let productos = [];
   let tasaBCV = 0;
 
-  /* ---------------- TOKEN ---------------- */
-  function getToken() {
-    return localStorage.getItem(TOKEN_KEY) || '';
-  }
-  function setToken(t) {
-    localStorage.setItem(TOKEN_KEY, t);
-  }
-  function clearToken() {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-  }
+  function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+  function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+  function clearToken() { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
 
-  /* ---------------- FORMATO ---------------- */
   function fmtBs(n) {
     return 'Bs. ' + (Number(n) || 0).toLocaleString('es-VE', {
       minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -85,21 +79,14 @@
     setTimeout(() => { elMsg.className = 'msg'; }, 4000);
   }
 
-  /* ---------------- FETCH ---------------- */
   async function api(path, opts = {}) {
-    const headers = Object.assign(
-      { Accept: 'application/json' },
-      opts.headers || {}
-    );
+    const headers = Object.assign({ Accept: 'application/json' }, opts.headers || {});
     const token = getToken();
-    if (token && path.startsWith('/api/admin')) {
-      headers.Authorization = 'Bearer ' + token;
-    }
-    const res = await fetch(API + path, { ...opts, headers });
+    if (token && path.startsWith('/api/admin')) headers.Authorization = 'Bearer ' + token;
 
+    const res = await fetch(API + path, { ...opts, headers });
     if (res.status === 401) {
-      clearToken();
-      mostrarLogin();
+      clearToken(); mostrarLogin();
       throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
     }
     if (!res.ok) {
@@ -110,7 +97,6 @@
     return res.json();
   }
 
-  /* ---------------- LOGIN ---------------- */
   function mostrarLogin() {
     el.appView.classList.remove('visible');
     el.loginView.classList.remove('hidden');
@@ -125,19 +111,14 @@
     e.preventDefault();
     const btn = el.loginForm.querySelector('button[type=submit]');
     btn.disabled = true; btn.textContent = 'Ingresando…';
-
     try {
       const res = await fetch(API + '/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user: el.loginUser.value.trim(),
-          pass: el.loginPass.value,
-        }),
+        body: JSON.stringify({ user: el.loginUser.value.trim(), pass: el.loginPass.value }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
-
       setToken(data.token);
       localStorage.setItem(USER_KEY, el.loginUser.value.trim());
       el.loginPass.value = '';
@@ -150,12 +131,8 @@
     }
   });
 
-  el.btnLogout.addEventListener('click', () => {
-    clearToken();
-    mostrarLogin();
-  });
+  el.btnLogout.addEventListener('click', () => { clearToken(); mostrarLogin(); });
 
-  /* ---------------- TABS ---------------- */
   document.querySelectorAll('.tab').forEach((t) => {
     t.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach((x) => x.classList.remove('active'));
@@ -165,7 +142,7 @@
     });
   });
 
-  /* ---------------- CARGA ---------------- */
+  /* -------- CARGA -------- */
   async function cargarCategorias() {
     categorias = await api('/api/categorias');
     el.categoria_id.innerHTML = categorias.length
@@ -191,22 +168,28 @@
     renderTablaProductos();
   }
 
+  async function cargarConfig() {
+    const cfg = await api('/api/admin/config');
+    el.cfgNombre.value = cfg.nombre_negocio || '';
+    el.cfgTitulo.value = cfg.hero_titulo || '';
+    el.cfgTexto.value = cfg.hero_texto || '';
+  }
+
   async function cargarTodo() {
     try {
-      await Promise.all([cargarCategorias(), cargarTasa(), cargarProductos()]);
+      await Promise.all([cargarCategorias(), cargarTasa(), cargarProductos(), cargarConfig()]);
     } catch (err) {
       showMsg(el.mensaje, 'Error al cargar datos: ' + err.message, false);
     }
   }
 
-  /* ---------------- PREVIEW Bs ---------------- */
   function actualizarPreviewBs() {
     const usd = parseFloat(el.precio_usd.value) || 0;
     el.precio_bs_preview.value = tasaBCV ? fmtBs(usd * tasaBCV) : '—';
   }
   el.precio_usd.addEventListener('input', actualizarPreviewBs);
 
-  /* ---------------- TABLA PRODUCTOS ---------------- */
+  /* -------- PRODUCTOS -------- */
   function renderTablaProductos() {
     if (!productos.length) {
       el.tablaProductos.innerHTML =
@@ -230,7 +213,6 @@
     `).join('');
   }
 
-  /* ---------------- FORM PRODUCTO ---------------- */
   function limpiarFormulario() {
     el.form.reset();
     el.productoId.value = '';
@@ -252,12 +234,8 @@
     el.formTitulo.textContent = 'Editar producto #' + p.id;
     el.btnCancelar.style.display = 'inline-flex';
     el.imagen.value = '';
-    if (p.imagen_url) {
-      el.preview.src = p.imagen_url;
-      el.preview.classList.add('show');
-    } else {
-      el.preview.classList.remove('show');
-    }
+    if (p.imagen_url) { el.preview.src = p.imagen_url; el.preview.classList.add('show'); }
+    else { el.preview.classList.remove('show'); }
     actualizarPreviewBs();
     document.getElementById('panel-productos').scrollIntoView({ behavior: 'smooth' });
   }
@@ -281,9 +259,7 @@
 
   el.form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    el.btnGuardar.disabled = true;
-    el.btnGuardar.textContent = 'Guardando…';
-
+    el.btnGuardar.disabled = true; el.btnGuardar.textContent = 'Guardando…';
     try {
       let imagen_url = null;
       if (el.imagen.files[0]) imagen_url = await subirImagen(el.imagen.files[0]);
@@ -302,35 +278,30 @@
         const actual = productos.find((p) => String(p.id) === String(id));
         payload.imagen_url = imagen_url || (actual?.imagen_url ?? null);
         await api('/api/admin/productos/' + id, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        showMsg(el.mensaje, 'Producto actualizado correctamente');
+        showMsg(el.mensaje, 'Producto actualizado');
       } else {
         payload.imagen_url = imagen_url;
         await api('/api/admin/productos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        showMsg(el.mensaje, 'Producto creado correctamente');
+        showMsg(el.mensaje, 'Producto creado');
       }
-
       limpiarFormulario();
       await cargarProductos();
     } catch (err) {
       showMsg(el.mensaje, 'Error: ' + err.message, false);
     } finally {
-      el.btnGuardar.disabled = false;
-      el.btnGuardar.textContent = 'Guardar producto';
+      el.btnGuardar.disabled = false; el.btnGuardar.textContent = 'Guardar producto';
     }
   });
 
   el.tablaProductos.addEventListener('click', async (e) => {
     const edit = e.target.closest('[data-editar]');
     const del = e.target.closest('[data-eliminar]');
-
     if (edit) {
       const p = productos.find((x) => String(x.id) === edit.dataset.editar);
       if (p) cargarEnFormulario(p);
@@ -341,13 +312,11 @@
         await api('/api/admin/productos/' + del.dataset.eliminar, { method: 'DELETE' });
         showMsg(el.mensaje, 'Producto eliminado');
         await cargarProductos();
-      } catch (err) {
-        showMsg(el.mensaje, 'Error: ' + err.message, false);
-      }
+      } catch (err) { showMsg(el.mensaje, 'Error: ' + err.message, false); }
     }
   });
 
-  /* ---------------- CATEGORÍAS ---------------- */
+  /* -------- CATEGORÍAS -------- */
   function renderTablaCategorias() {
     if (!categorias.length) {
       el.tablaCategorias.innerHTML =
@@ -374,37 +343,30 @@
     if (!nombre) return;
     try {
       await api('/api/admin/categorias', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nombre }),
       });
       showMsg(el.categoriaMsg, 'Categoría creada');
       el.categoriaNombre.value = '';
       await cargarCategorias();
-    } catch (err) {
-      showMsg(el.categoriaMsg, 'Error: ' + err.message, false);
-    }
+    } catch (err) { showMsg(el.categoriaMsg, 'Error: ' + err.message, false); }
   });
 
   el.tablaCategorias.addEventListener('click', async (e) => {
     const edit = e.target.closest('[data-editcat]');
     const del = e.target.closest('[data-delcat]');
-
     if (edit) {
       const c = categorias.find((x) => String(x.id) === edit.dataset.editcat);
       const nuevo = prompt('Nuevo nombre:', c?.nombre || '');
       if (!nuevo || !nuevo.trim()) return;
       try {
         await api('/api/admin/categorias/' + edit.dataset.editcat, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nombre: nuevo.trim() }),
         });
         showMsg(el.categoriaMsg, 'Categoría actualizada');
         await cargarCategorias();
-      } catch (err) {
-        showMsg(el.categoriaMsg, 'Error: ' + err.message, false);
-      }
+      } catch (err) { showMsg(el.categoriaMsg, 'Error: ' + err.message, false); }
     }
     if (del) {
       if (!confirm('¿Eliminar esta categoría? Los productos quedarán sin categoría.')) return;
@@ -412,59 +374,59 @@
         await api('/api/admin/categorias/' + del.dataset.delcat, { method: 'DELETE' });
         showMsg(el.categoriaMsg, 'Categoría eliminada');
         await Promise.all([cargarCategorias(), cargarProductos()]);
-      } catch (err) {
-        showMsg(el.categoriaMsg, 'Error: ' + err.message, false);
-      }
+      } catch (err) { showMsg(el.categoriaMsg, 'Error: ' + err.message, false); }
     }
   });
 
-  /* ---------------- CONFIG / TASA ---------------- */
+  /* -------- APARIENCIA -------- */
+  el.formApariencia.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await api('/api/admin/config', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre_negocio: el.cfgNombre.value.trim(),
+          hero_titulo: el.cfgTitulo.value.trim(),
+          hero_texto: el.cfgTexto.value.trim(),
+        }),
+      });
+      showMsg(el.aparienciaMsg, 'Cambios guardados');
+    } catch (err) {
+      showMsg(el.aparienciaMsg, 'Error: ' + err.message, false);
+    }
+  });
+
+  /* -------- TASA -------- */
   el.btnRefrescar.addEventListener('click', async () => {
-    el.btnRefrescar.disabled = true;
-    el.btnRefrescar.textContent = 'Actualizando…';
+    el.btnRefrescar.disabled = true; el.btnRefrescar.textContent = 'Actualizando…';
     try {
       const r = await api('/api/admin/tasa/refrescar', { method: 'POST' });
       showMsg(el.tasaMsg, 'Tasa actualizada a ' + fmtBs(r.tasa_bcv));
       await cargarTasa();
-    } catch (err) {
-      showMsg(el.tasaMsg, 'Error: ' + err.message, false);
-    } finally {
-      el.btnRefrescar.disabled = false;
-      el.btnRefrescar.textContent = 'Forzar actualización';
-    }
+    } catch (err) { showMsg(el.tasaMsg, 'Error: ' + err.message, false); }
+    finally { el.btnRefrescar.disabled = false; el.btnRefrescar.textContent = 'Forzar actualización'; }
   });
 
   el.btnGuardarTasa.addEventListener('click', async () => {
     const tasa = parseFloat(el.tasaManual.value);
-    if (!tasa || tasa <= 0) {
-      showMsg(el.tasaMsg, 'Introduce una tasa válida', false);
-      return;
-    }
+    if (!tasa || tasa <= 0) { showMsg(el.tasaMsg, 'Introduce una tasa válida', false); return; }
     try {
       await api('/api/admin/tasa', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tasa }),
       });
       showMsg(el.tasaMsg, 'Tasa guardada manualmente');
       el.tasaManual.value = '';
       await cargarTasa();
       await cargarProductos();
-    } catch (err) {
-      showMsg(el.tasaMsg, 'Error: ' + err.message, false);
-    }
+    } catch (err) { showMsg(el.tasaMsg, 'Error: ' + err.message, false); }
   });
 
-  /* ---------------- INIT ---------------- */
+  /* -------- INIT -------- */
   (async function init() {
     if (getToken()) {
-      try {
-        await cargarTodo();
-        mostrarApp();
-        return;
-      } catch {
-        clearToken();
-      }
+      try { await cargarTodo(); mostrarApp(); return; }
+      catch { clearToken(); }
     }
     mostrarLogin();
   })();
