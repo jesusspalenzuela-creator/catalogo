@@ -6,7 +6,7 @@
 
   const CONFIG  = window.CATALOGO_CONFIG || {};
   const API_URL = String(CONFIG.API_URL || 'http://localhost:3000').replace(/\/+$/, '');
-  const WHATSAPP = String(CONFIG.WHATSAPP_NUMBER || '').replace(/\D/g, '');
+  const WHATSAPP_FALLBACK = String(CONFIG.WHATSAPP_NUMBER || '').replace(/\D/g, '');
   const STORAGE_KEY = 'catalogo_carrito_v1';
 
   const state = {
@@ -19,6 +19,8 @@
       nombre_negocio: 'Mi Negocio',
       hero_titulo: 'Todo lo que necesitas, en un solo lugar',
       hero_texto: 'Explora nuestro catálogo con productos seleccionados, precios actualizados y envíos a todo el país.',
+      logo_url: '',
+      whatsapp_number: '',
     },
   };
 
@@ -47,6 +49,17 @@
     footerNombre:  document.getElementById('footerNombre'),
     toast:         document.getElementById('toast'),
     docTitle:      document.querySelector('title'),
+
+    // modal de pedido
+    checkoutOverlay: document.getElementById('checkoutOverlay'),
+    checkoutModal:   document.getElementById('checkoutModal'),
+    checkoutBody:    document.getElementById('checkoutBody'),
+    checkoutClose:   document.getElementById('checkoutClose'),
+    checkoutCancel:  document.getElementById('checkoutCancel'),
+    checkoutConfirm: document.getElementById('checkoutConfirm'),
+    checkoutCount:   document.getElementById('checkoutCount'),
+    checkoutTotalBs: document.getElementById('checkoutTotalBs'),
+    checkoutTotalUsd:document.getElementById('checkoutTotalUsd'),
   };
 
   /* ---------------- UTILIDADES ---------------- */
@@ -72,16 +85,26 @@
     };
   }
 
+  /* ---------------- PLACEHOLDER GENÉRICO ----------------
+     Bolsa de compras genérica: sirve para cualquier negocio.
+     ------------------------------------------------------ */
   const PLACEHOLDER_IMG =
     'data:image/svg+xml;utf8,' +
     encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
-        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#dbeafe"/><stop offset="100%" stop-color="#f1f5f9"/>
-        </linearGradient></defs>
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#eff6ff"/>
+            <stop offset="100%" stop-color="#f1f5f9"/>
+          </linearGradient>
+        </defs>
         <rect width="400" height="300" fill="url(#g)"/>
-        <text x="50%" y="52%" text-anchor="middle" font-family="Inter,Arial,sans-serif"
-              font-size="18" fill="#94a3b8">Sin imagen</text>
+        <g transform="translate(148,100)" fill="none" stroke="#94a3b8" stroke-width="3"
+           stroke-linejoin="round" stroke-linecap="round">
+          <rect x="0" y="24" width="104" height="88" rx="10"/>
+          <path d="M26 24 V14 a26 26 0 0 1 52 0 V24"/>
+          <path d="M22 44 L82 44" stroke-opacity=".45"/>
+        </g>
       </svg>`
     );
 
@@ -92,9 +115,7 @@
     el.toast.innerHTML = `<span class="toast__icon">✓</span><div>${texto}</div>`;
     el.toast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-      el.toast.classList.remove('show');
-    }, 2800);
+    toastTimer = setTimeout(() => el.toast.classList.remove('show'), 3200);
   }
 
   /* ---------------- PERSISTENCIA ---------------- */
@@ -141,7 +162,18 @@
   function aplicarConfig() {
     const c = state.config;
     if (el.brandName) el.brandName.textContent = c.nombre_negocio || 'Mi Negocio';
-    if (el.brandMark) el.brandMark.textContent = (c.nombre_negocio || 'M').trim().charAt(0).toUpperCase();
+
+    // Logo o letra inicial
+    if (el.brandMark) {
+      if (c.logo_url) {
+        el.brandMark.innerHTML = `<img src="${escapeHtml(c.logo_url)}" alt="Logo">`;
+        el.brandMark.classList.add('has-img');
+      } else {
+        el.brandMark.textContent = (c.nombre_negocio || 'M').trim().charAt(0).toUpperCase();
+        el.brandMark.classList.remove('has-img');
+      }
+    }
+
     if (el.heroTitulo) el.heroTitulo.textContent = c.hero_titulo || '';
     if (el.heroTexto) el.heroTexto.textContent = c.hero_texto || '';
     if (el.footerNombre) el.footerNombre.textContent = c.nombre_negocio || 'Mi Negocio';
@@ -153,12 +185,9 @@
 
   /* ---------------- RENDER CATEGORÍAS ---------------- */
   function renderCategorias() {
-    const total = state.productos.length;
-    const items = [{ id: 'all', nombre: 'Todos', count: total }];
-    state.categorias.forEach((cat) => {
-      const count = state.productos.filter((p) => p.categoria_id === cat.id).length;
-      items.push({ id: cat.id, nombre: cat.nombre, count });
-    });
+    const items = [{ id: 'all', nombre: 'Todos' }];
+    state.categorias.forEach((cat) => items.push({ id: cat.id, nombre: cat.nombre }));
+
     el.categoriesBar.innerHTML = items.map((it) => {
       const activa = String(state.categoriaActiva) === String(it.id);
       return `<button type="button" class="chip${activa ? ' is-active' : ''}"
@@ -183,7 +212,7 @@
     const imagen = p.imagen_url ? escapeHtml(p.imagen_url) : PLACEHOLDER_IMG;
     const cat = p.categoria_nombre ? escapeHtml(p.categoria_nombre) : 'General';
     const destacado = p.destacado ? '<span class="card__badge">Destacado</span>' : '';
-    const desc = p.descripcion ? escapeHtml(p.descripcion) : 'Sin descripción.';
+    const desc = p.descripcion ? escapeHtml(p.descripcion) : '';
     return `
       <article class="card" data-id="${escapeHtml(p.id)}">
         <div class="card__media">
@@ -254,7 +283,7 @@
     saveCart();
     renderCarrito();
     mostrarToast(
-      `<strong>${escapeHtml(prod.nombre)}</strong> agregado al carrito.<br>Puedes seguir agregando y cuando estés listo presiona el ícono del carrito 🛒`
+      `<strong>${escapeHtml(prod.nombre)}</strong> agregado al carrito.<br>Sigue agregando y cuando termines presiona el carrito 🛒`
     );
   }
 
@@ -318,7 +347,7 @@
     el.cartTotalUsd.textContent = fmtUsd(t.usd);
   }
 
-  /* ---------------- DRAWER ---------------- */
+  /* ---------------- DRAWER CARRITO ---------------- */
   function abrirCarrito() {
     el.cartOverlay.hidden = false;
     requestAnimationFrame(() => {
@@ -332,24 +361,85 @@
     el.cartOverlay.classList.remove('is-open');
     el.cartDrawer.classList.remove('is-open');
     el.cartDrawer.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    if (!el.checkoutModal.classList.contains('is-open')) document.body.style.overflow = '';
     setTimeout(() => {
       if (!el.cartDrawer.classList.contains('is-open')) el.cartOverlay.hidden = true;
     }, 250);
   }
 
-  /* ---------------- CHECKOUT ---------------- */
-  function finalizarCompra() {
-    if (!state.carrito.length) { alert('Tu carrito está vacío.'); return; }
-    const lineas = state.carrito.map((it) =>
-      `• ${it.nombre} x${it.cantidad} — ${fmtBs(it.precio_bs)} / ${fmtUsd(it.precio_usd)}`
-    ).join('\n');
+  /* ---------------- MODAL DE PEDIDO ---------------- */
+  function renderModalPedido() {
+    el.checkoutBody.innerHTML = state.carrito.map((it) => {
+      const img = it.imagen_url ? escapeHtml(it.imagen_url) : PLACEHOLDER_IMG;
+      const subtotalBs = it.precio_bs * it.cantidad;
+      const subtotalUsd = it.precio_usd * it.cantidad;
+      return `
+        <div class="checkout-item">
+          <img class="checkout-item__img" src="${img}" alt="${escapeHtml(it.nombre)}"
+               onerror="this.onerror=null;this.src='${PLACEHOLDER_IMG}'" />
+          <div class="checkout-item__info">
+            <p class="checkout-item__name">${escapeHtml(it.nombre)}</p>
+            <p class="checkout-item__meta">Cantidad: ${it.cantidad} · ${fmtUsd(it.precio_usd)} c/u</p>
+          </div>
+          <div class="checkout-item__price">
+            ${fmtBs(subtotalBs)}
+            <small>${fmtUsd(subtotalUsd)}</small>
+          </div>
+        </div>`;
+    }).join('');
+
     const t = totalCarrito();
-    const mensaje = `Hola, quiero hacer el siguiente pedido:\n\n${lineas}\n\nTotal: ${fmtBs(t.bs)} / ${fmtUsd(t.usd)}`;
-    if (WHATSAPP) {
-      window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensaje)}`, '_blank', 'noopener');
+    el.checkoutCount.textContent = totalUnidades() === 1
+      ? '1 unidad' : `${totalUnidades()} unidades`;
+    el.checkoutTotalBs.textContent = fmtBs(t.bs);
+    el.checkoutTotalUsd.textContent = fmtUsd(t.usd);
+  }
+
+  function abrirModalPedido() {
+    if (!state.carrito.length) return;
+    renderModalPedido();
+    cerrarCarrito();
+
+    el.checkoutOverlay.hidden = false;
+    el.checkoutModal.hidden = false;
+
+    requestAnimationFrame(() => {
+      el.checkoutOverlay.classList.add('is-open');
+      el.checkoutModal.classList.add('is-open');
+    });
+    document.body.style.overflow = 'hidden';
+  }
+
+  function cerrarModalPedido() {
+    el.checkoutOverlay.classList.remove('is-open');
+    el.checkoutModal.classList.remove('is-open');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+      if (!el.checkoutModal.classList.contains('is-open')) {
+        el.checkoutOverlay.hidden = true;
+        el.checkoutModal.hidden = true;
+      }
+    }, 280);
+  }
+
+  function enviarPedidoWhatsApp() {
+    const numero = (state.config.whatsapp_number || WHATSAPP_FALLBACK || '').replace(/\D/g, '');
+
+    const lineas = state.carrito.map((it) =>
+      `• ${it.nombre} x${it.cantidad} — ${fmtBs(it.precio_bs * it.cantidad)} / ${fmtUsd(it.precio_usd * it.cantidad)}`
+    ).join('\n');
+
+    const t = totalCarrito();
+    const mensaje =
+      `Hola, quiero hacer el siguiente pedido:\n\n${lineas}\n\n` +
+      `Total: ${fmtBs(t.bs)} / ${fmtUsd(t.usd)}`;
+
+    if (numero) {
+      const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+      window.open(url, '_blank', 'noopener');
+      cerrarModalPedido();
     } else {
-      alert(mensaje + '\n\n(Configura WHATSAPP_NUMBER en config.js para enviar por WhatsApp.)');
+      alert('El número de WhatsApp no está configurado. Contacta al negocio.');
     }
   }
 
@@ -377,9 +467,6 @@
     el.cartButton.addEventListener('click', abrirCarrito);
     el.cartClose.addEventListener('click', cerrarCarrito);
     el.cartOverlay.addEventListener('click', cerrarCarrito);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && el.cartDrawer.classList.contains('is-open')) cerrarCarrito();
-    });
 
     el.cartItems.addEventListener('click', (e) => {
       const inc = e.target.closest('[data-inc]');
@@ -390,7 +477,19 @@
       else if (rem) eliminarDelCarrito(rem.dataset.remove);
     });
 
-    el.cartCheckout.addEventListener('click', finalizarCompra);
+    el.cartCheckout.addEventListener('click', abrirModalPedido);
+
+    // Modal de pedido
+    el.checkoutClose.addEventListener('click', cerrarModalPedido);
+    el.checkoutCancel.addEventListener('click', cerrarModalPedido);
+    el.checkoutOverlay.addEventListener('click', cerrarModalPedido);
+    el.checkoutConfirm.addEventListener('click', enviarPedidoWhatsApp);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (el.checkoutModal.classList.contains('is-open')) cerrarModalPedido();
+      else if (el.cartDrawer.classList.contains('is-open')) cerrarCarrito();
+    });
   }
 
   /* ---------------- INIT ---------------- */
