@@ -45,6 +45,10 @@
     cfgNombre: document.getElementById('cfgNombre'),
     cfgTitulo: document.getElementById('cfgTitulo'),
     cfgTexto: document.getElementById('cfgTexto'),
+    cfgLogo: document.getElementById('cfgLogo'),
+    cfgWhatsapp: document.getElementById('cfgWhatsapp'),
+    logoPreview: document.getElementById('logoPreview'),
+    btnQuitarLogo: document.getElementById('btnQuitarLogo'),
     aparienciaMsg: document.getElementById('aparienciaMsg'),
 
     tasaValor: document.getElementById('tasaValor'),
@@ -58,6 +62,8 @@
   let categorias = [];
   let productos = [];
   let tasaBCV = 0;
+  let logoActual = '';
+  let subiendoLogo = false;
 
   function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
   function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
@@ -173,7 +179,20 @@
     el.cfgNombre.value = cfg.nombre_negocio || '';
     el.cfgTitulo.value = cfg.hero_titulo || '';
     el.cfgTexto.value = cfg.hero_texto || '';
+    el.cfgWhatsapp.value = cfg.whatsapp_number || '';
+    logoActual = cfg.logo_url || '';
+    renderLogoPreview();
   }
+
+  function renderLogoPreview() {
+    if (logoActual) {
+      el.logoPreview.innerHTML = `<img src="${logoActual}" alt="">`;
+    } else {
+      el.logoPreview.textContent = (el.cfgNombre.value || 'M').trim().charAt(0).toUpperCase() || 'M';
+    }
+  }
+
+  el.cfgNombre.addEventListener('input', renderLogoPreview);
 
   async function cargarTodo() {
     try {
@@ -379,8 +398,35 @@
   });
 
   /* -------- APARIENCIA -------- */
+  el.cfgLogo.addEventListener('change', async () => {
+    const f = el.cfgLogo.files[0];
+    if (!f) return;
+    subiendoLogo = true;
+    el.logoPreview.innerHTML = '<div style="font-size:.8rem;color:#64748b">Subiendo…</div>';
+    try {
+      const url = await subirImagen(f);
+      logoActual = url;
+      renderLogoPreview();
+    } catch (err) {
+      showMsg(el.aparienciaMsg, 'Error al subir logo: ' + err.message, false);
+      renderLogoPreview();
+    } finally {
+      subiendoLogo = false;
+      el.cfgLogo.value = '';
+    }
+  });
+
+  el.btnQuitarLogo.addEventListener('click', () => {
+    logoActual = '';
+    renderLogoPreview();
+  });
+
   el.formApariencia.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (subiendoLogo) {
+      showMsg(el.aparienciaMsg, 'Espera a que termine la subida del logo', false);
+      return;
+    }
     try {
       await api('/api/admin/config', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -388,9 +434,12 @@
           nombre_negocio: el.cfgNombre.value.trim(),
           hero_titulo: el.cfgTitulo.value.trim(),
           hero_texto: el.cfgTexto.value.trim(),
+          logo_url: logoActual,
+          whatsapp_number: el.cfgWhatsapp.value.trim(),
         }),
       });
       showMsg(el.aparienciaMsg, 'Cambios guardados');
+      await cargarConfig();
     } catch (err) {
       showMsg(el.aparienciaMsg, 'Error: ' + err.message, false);
     }
