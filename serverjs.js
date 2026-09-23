@@ -22,7 +22,7 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_USER   = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS   = process.env.ADMIN_PASS || 'cambiar_esto';
 const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
-const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
+const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 /* ---------------------------------------------------------
    CORS
@@ -114,26 +114,19 @@ function verificarToken(token) {
     const payload = JSON.parse(Buffer.from(data, 'base64url').toString());
     if (!payload.exp || payload.exp < Date.now()) return null;
     return payload;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function adminAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const [scheme, token] = header.split(' ');
-  if (scheme !== 'Bearer' || !token) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
+  if (scheme !== 'Bearer' || !token) return res.status(401).json({ error: 'No autorizado' });
   const payload = verificarToken(token);
   if (!payload) return res.status(401).json({ error: 'Token inválido o expirado' });
   req.admin = payload;
   next();
 }
 
-/* ---------------------------------------------------------
-   RATE LIMITING en login
-   --------------------------------------------------------- */
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 8,
@@ -143,14 +136,40 @@ const loginLimiter = rateLimit({
 });
 
 /* ---------------------------------------------------------
+   CONFIGURACIÓN GENERAL (nombre del negocio, hero, etc.)
+   --------------------------------------------------------- */
+async function leerConfig() {
+  const { rows } = await pool.query(`SELECT clave, valor FROM configuracion`);
+  const map = {};
+  rows.forEach((r) => { map[r.clave] = r.valor; });
+  return {
+    nombre_negocio: map.nombre_negocio || 'Mi Negocio',
+    hero_titulo: map.hero_titulo || 'Todo lo que necesitas, en un solo lugar',
+    hero_texto:
+      map.hero_texto ||
+      'Explora nuestro catálogo con productos seleccionados, precios actualizados y envíos a todo el país.',
+    tasa_bcv: parseFloat(map.tasa_bcv || '0') || 0,
+  };
+}
+
+async function guardarConfig(clave, valor) {
+  await pool.query(
+    `INSERT INTO configuracion (clave, valor, updated_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (clave)
+     DO UPDATE SET valor = EXCLUDED.valor, updated_at = NOW()`,
+    [clave, String(valor ?? '')]
+  );
+}
+
+/* ---------------------------------------------------------
    TASA BCV — 3 fuentes con fallback
    --------------------------------------------------------- */
 async function fetchTimeout(url, options = {}, ms = 8000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    const res = await fetch(url, { ...options, signal: ctrl.signal });
-    return res;
+    return await fetch(url, { ...options, signal: ctrl.signal });
   } finally {
     clearTimeout(t);
   }
@@ -196,20 +215,8 @@ async function tasaDesdeBCVDirecto() {
   return n;
 }
 
-async function guardarTasa(tasa) {
-  await pool.query(
-    `INSERT INTO configuracion (clave, valor, updated_at)
-     VALUES ('tasa_bcv', $1, NOW())
-     ON CONFLICT (clave)
-     DO UPDATE SET valor = EXCLUDED.valor, updated_at = NOW()`,
-    [String(tasa)]
-  );
-}
-
 async function leerTasaGuardada() {
-  const { rows } = await pool.query(
-    `SELECT valor FROM configuracion WHERE clave = 'tasa_bcv'`
-  );
+  const { rows } = await pool.query(`SELECT valor FROM configuracion WHERE clave = 'tasa_bcv'`);
   return rows.length ? parseFloat(rows[0].valor) : 0;
 }
 
@@ -219,28 +226,25 @@ async function actualizarTasaBCV() {
     ['pydolarve.org', tasaDesdePydolarve],
     ['bcv.org.ve (directo)', tasaDesdeBCVDirecto],
   ];
-
   for (const [nombre, fn] of fuentes) {
     try {
       const tasa = await fn();
-      await guardarTasa(tasa);
+      await guardarConfig('tasa_bcv', tasa);
       console.log(`[BCV] Tasa ${tasa} obtenida desde ${nombre}`);
       return tasa;
     } catch (err) {
       console.error(`[BCV] Falló ${nombre}: ${err.message}`);
     }
   }
-
-  console.error('[BCV] Todas las fuentes fallaron. Se mantiene la última guardada.');
+  console.error('[BCV] Todas las fuentes fallaron.');
   return null;
 }
 
-// Al arrancar y luego cada 6 horas
 actualizarTasaBCV();
 setInterval(actualizarTasaBCV, 6 * 60 * 60 * 1000);
 
 /* ---------------------------------------------------------
-   HEALTH / TASA PÚBLICA
+   HEALTH / CONFIG PÚBLICA / TASA
    --------------------------------------------------------- */
 app.get('/', (req, res) => {
   res.json({ ok: true, service: 'catalogo-api', time: new Date().toISOString() });
@@ -249,6 +253,11 @@ app.get('/', (req, res) => {
 app.get('/api/health', asyncHandler(async (req, res) => {
   const { rows } = await pool.query('SELECT NOW() AS now');
   res.json({ ok: true, db: rows[0].now });
+}));
+
+app.get('/api/config', asyncHandler(async (req, res) => {
+  const cfg = await leerConfig();
+  res.json(cfg);
 }));
 
 app.get('/api/tasa-bcv', asyncHandler(async (req, res) => {
@@ -326,44 +335,48 @@ app.get('/api/productos/:id', asyncHandler(async (req, res) => {
 }));
 
 /* =========================================================
-   ADMIN — LOGIN
+   ADMIN — LOGIN / HTML
    ========================================================= */
 app.post('/api/admin/login', loginLimiter, (req, res) => {
   const { user, pass } = req.body || {};
+  if (!user || !pass) return res.status(400).json({ error: 'Usuario y contraseña son obligatorios' });
 
-  if (!user || !pass) {
-    return res.status(400).json({ error: 'Usuario y contraseña son obligatorios' });
-  }
+  const userOk = String(user).length === ADMIN_USER.length &&
+    crypto.timingSafeEqual(Buffer.from(String(user)), Buffer.from(ADMIN_USER));
+  const passOk = String(pass).length === ADMIN_PASS.length &&
+    crypto.timingSafeEqual(Buffer.from(String(pass)), Buffer.from(ADMIN_PASS));
 
-  const userOk = crypto.timingSafeEqual(
-    Buffer.from(String(user)),
-    Buffer.from(ADMIN_USER)
-  ) && String(user).length === ADMIN_USER.length;
+  if (!userOk || !passOk) return res.status(401).json({ error: 'Credenciales incorrectas' });
 
-  const passOk = crypto.timingSafeEqual(
-    Buffer.from(String(pass)),
-    Buffer.from(ADMIN_PASS)
-  ) && String(pass).length === ADMIN_PASS.length;
-
-  if (!userOk || !passOk) {
-    return res.status(401).json({ error: 'Credenciales incorrectas' });
-  }
-
-  const token = crearToken(user);
-  res.json({ ok: true, token, expira_en_ms: TOKEN_TTL_MS });
+  res.json({ ok: true, token: crearToken(user), expira_en_ms: TOKEN_TTL_MS });
 });
+
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+app.get('/admin.js', (req, res) => res.sendFile(path.join(__dirname, 'admin.js')));
 
 /* =========================================================
-   ADMIN — HTML protegido por token en query
-   Sirve el HTML del admin. El HTML hace login y guarda el token.
-   La protección real está en /api/admin/*.
+   ADMIN — CONFIGURACIÓN DEL SITIO
    ========================================================= */
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin.html'));
-});
-app.get('/admin.js', (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin.js'));
-});
+app.get('/api/admin/config', adminAuth, asyncHandler(async (req, res) => {
+  const cfg = await leerConfig();
+  res.json(cfg);
+}));
+
+app.put('/api/admin/config', adminAuth, asyncHandler(async (req, res) => {
+  const { nombre_negocio, hero_titulo, hero_texto } = req.body || {};
+
+  if (nombre_negocio !== undefined) {
+    if (!String(nombre_negocio).trim()) {
+      return res.status(400).json({ error: 'El nombre del negocio no puede estar vacío' });
+    }
+    await guardarConfig('nombre_negocio', String(nombre_negocio).trim());
+  }
+  if (hero_titulo !== undefined) await guardarConfig('hero_titulo', String(hero_titulo).trim());
+  if (hero_texto !== undefined) await guardarConfig('hero_texto', String(hero_texto).trim());
+
+  const cfg = await leerConfig();
+  res.json({ ok: true, ...cfg });
+}));
 
 /* =========================================================
    ADMIN — CRUD PRODUCTOS
@@ -386,7 +399,6 @@ app.post('/api/admin/productos', adminAuth, asyncHandler(async (req, res) => {
 app.put('/api/admin/productos/:id', adminAuth, asyncHandler(async (req, res) => {
   const id = toNumber(req.params.id);
   if (id === null) return res.status(400).json({ error: 'ID inválido' });
-
   const { nombre, descripcion, precio_usd, imagen_url, categoria_id, disponible, destacado } = req.body || {};
 
   const { rows } = await pool.query(
@@ -439,7 +451,6 @@ app.put('/api/admin/categorias/:id', adminAuth, asyncHandler(async (req, res) =>
   if (id === null) return res.status(400).json({ error: 'ID inválido' });
   const { nombre } = req.body || {};
   if (!nombre || !String(nombre).trim()) return res.status(400).json({ error: 'Nombre obligatorio' });
-
   try {
     const { rows } = await pool.query(
       `UPDATE categorias SET nombre = $1 WHERE id = $2 RETURNING *`,
@@ -462,11 +473,11 @@ app.delete('/api/admin/categorias/:id', adminAuth, asyncHandler(async (req, res)
 }));
 
 /* =========================================================
-   ADMIN — TASA BCV
+   ADMIN — TASA
    ========================================================= */
 app.post('/api/admin/tasa/refrescar', adminAuth, asyncHandler(async (req, res) => {
   const tasa = await actualizarTasaBCV();
-  if (tasa === null) return res.status(502).json({ error: 'No se pudo obtener la tasa desde ninguna fuente' });
+  if (tasa === null) return res.status(502).json({ error: 'No se pudo obtener la tasa' });
   res.json({ ok: true, tasa_bcv: tasa });
 }));
 
@@ -474,7 +485,7 @@ app.post('/api/admin/tasa', adminAuth, asyncHandler(async (req, res) => {
   const { tasa } = req.body || {};
   const n = toNumber(tasa);
   if (n === null || n <= 0) return res.status(400).json({ error: 'Tasa inválida' });
-  await guardarTasa(n);
+  await guardarConfig('tasa_bcv', n);
   res.json({ ok: true, tasa_bcv: n });
 }));
 
@@ -512,9 +523,6 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message || 'Error interno' });
 });
 
-/* =========================================================
-   ARRANQUE
-   ========================================================= */
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ API escuchando en http://0.0.0.0:${PORT}`);
   console.log(`   Admin en /admin (usuario: ${ADMIN_USER})`);
