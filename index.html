@@ -4,25 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#1e3a8a" />
-  <title>Catálogo | Mi Negocio</title>
+  <title>Catálogo</title>
   <meta name="description" content="Catálogo online con los mejores productos y precios." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet"
-  />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
 </head>
 <body>
 
-  <!-- ================= HEADER ================= -->
   <header class="header">
     <div class="container header__inner">
       <a href="#" class="brand" aria-label="Inicio">
-        <span class="brand__mark">M</span>
-        <span class="brand__name">Mi Negocio</span>
+        <span class="brand__mark" id="brandMark">M</span>
+        <span class="brand__name" id="brandName">Mi Negocio</span>
       </a>
 
       <div class="search">
@@ -30,22 +27,14 @@
           <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
           <path d="M20 20l-3.2-3.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
-        <input
-          id="searchInput"
-          type="search"
-          class="search__input"
-          placeholder="Buscar productos..."
-          autocomplete="off"
-          aria-label="Buscar productos"
-        />
+        <input id="searchInput" type="search" class="search__input"
+               placeholder="Buscar productos..." autocomplete="off" aria-label="Buscar productos" />
       </div>
 
       <button id="cartButton" class="cart-btn" aria-label="Abrir carrito">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path
-            d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-          />
+          <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           <circle cx="10" cy="20" r="1.6" fill="currentColor" />
           <circle cx="18" cy="20" r="1.6" fill="currentColor" />
         </svg>
@@ -54,13 +43,11 @@
     </div>
   </header>
 
-  <!-- ================= HERO ================= -->
   <section class="hero">
     <div class="container hero__inner">
       <div class="hero__content">
-        <span class="hero__badge">Nuevos productos disponibles</span>
-        <h1 class="hero__title">Todo lo que necesitas, en un solo lugar</h1>
-        <p class="hero__text">
+        <h1 class="hero__title" id="heroTitulo">Todo lo que necesitas, en un solo lugar</h1>
+        <p class="hero__text" id="heroTexto">
           Explora nuestro catálogo con productos seleccionados, precios actualizados
           y envíos a todo el país.
         </p>
@@ -76,14 +63,11 @@
     </div>
   </section>
 
-  <!-- ================= CATÁLOGO ================= -->
   <main class="container main">
-    <!-- Categorías -->
     <section class="categories" aria-label="Categorías">
       <div id="categoriesBar" class="categories__bar"></div>
     </section>
 
-    <!-- Productos -->
     <section id="catalogo" class="catalog">
       <div class="catalog__header">
         <h2 id="catalogTitle" class="catalog__title">Todos los productos</h2>
@@ -107,15 +91,12 @@
     </section>
   </main>
 
-  <!-- ================= FOOTER ================= -->
   <footer class="footer">
     <div class="container footer__inner">
-      <p>&copy; <span id="year"></span> Mi Negocio. Todos los derechos reservados.</p>
-      <p class="footer__small">Catálogo desarrollado con HTML, CSS, JavaScript, Node.js y PostgreSQL.</p>
+      <p>&copy; <span id="year"></span> <span id="footerNombre">Mi Negocio</span>. Todos los derechos reservados.</p>
     </div>
   </footer>
 
-  <!-- ================= CARRITO ================= -->
   <div id="cartOverlay" class="overlay" hidden></div>
 
   <aside id="cartDrawer" class="cart-drawer" aria-hidden="true" aria-label="Carrito de compras">
@@ -141,6 +122,8 @@
       <button id="cartCheckout" class="btn btn--primary btn--block">Finalizar compra</button>
     </div>
   </aside>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="config.js"></script>
   <script src="app.js"></script>
