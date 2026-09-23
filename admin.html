@@ -62,9 +62,10 @@
             border:1px solid var(--gray-200); border-radius:12px; padding:6px; }
     .tab {
       flex:1; height:38px; border-radius:8px; font-weight:600; font-size:.88rem;
-      color:var(--gray-500); transition:background .15s,color .15s;
+      color:var(--gray-900);             /* ← Negro, no gris */
+      transition:background .15s,color .15s;
     }
-    .tab:hover { background:var(--gray-50); color:var(--gray-900); }
+    .tab:hover { background:var(--gray-100); color:var(--gray-900); }
     .tab.active { background:var(--blue-600); color:#fff; }
     .panel { display:none; }
     .panel.active { display:block; }
@@ -75,6 +76,18 @@
     }
     .card h2 { margin:0 0 4px; font-size:1.1rem; letter-spacing:-.01em; }
     .card .sub { margin:0 0 18px; color:var(--gray-500); font-size:.85rem; }
+
+    /* Tablas con scroll interno */
+    .table-wrap {
+      max-height: 420px;
+      overflow-y: auto;
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      margin-top: 4px;
+    }
+    .table-wrap::-webkit-scrollbar { width: 8px; }
+    .table-wrap::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 999px; }
+    .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
 
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     .field { display:flex; flex-direction:column; gap:6px; }
@@ -129,7 +142,8 @@
     table { width:100%; border-collapse:collapse; font-size:.88rem; }
     th, td { text-align:left; padding:12px 10px; border-bottom:1px solid var(--gray-100); }
     th { color:var(--gray-500); font-weight:600; font-size:.75rem;
-         text-transform:uppercase; letter-spacing:.05em; background:var(--gray-50); }
+         text-transform:uppercase; letter-spacing:.05em; background:var(--gray-50);
+         position:sticky; top:0; z-index:1; }
     tr:last-child td { border-bottom:0; }
     td img { width:46px; height:46px; object-fit:cover; border-radius:8px; background:var(--gray-100); }
     .empty-row { text-align:center; color:var(--gray-400); padding:34px 10px; font-size:.9rem; }
@@ -145,11 +159,100 @@
     .tasa-box__value { font-size:1.7rem; font-weight:800; color:var(--blue-900); letter-spacing:-.02em; }
     .tasa-box__updated { font-size:.78rem; color:var(--gray-500); margin-top:4px; }
 
-    .logo-row {
-      display:flex; align-items:center; gap:16px; flex-wrap:wrap;
-    }
+    .logo-row { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
     .logo-row__actions { display:flex; flex-direction:column; gap:8px; }
     .logo-row__hint { font-size:.78rem; color:var(--gray-500); }
+
+    /* ---------- PALETAS DE COLORES ---------- */
+    .presets {
+      display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;
+    }
+    .preset {
+      width:44px; height:44px; border-radius:12px; padding:0;
+      border:2px solid transparent; position:relative; cursor:pointer;
+      transition: transform .12s, border-color .15s;
+      overflow:hidden;
+    }
+    .preset:hover { transform: translateY(-2px); }
+    .preset.is-active { border-color: var(--gray-900); }
+    .preset__inner {
+      display:flex; width:100%; height:100%;
+    }
+    .preset__inner span { flex:1; }
+    .preset__name {
+      font-size:.7rem; color:var(--gray-500); text-align:center;
+      margin-top:6px; font-weight:600;
+    }
+
+    .color-pickers {
+      display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px;
+    }
+    .color-field {
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .color-field__row {
+      display:flex; gap:10px; align-items:center;
+    }
+    .color-field input[type="color"] {
+      width:48px; height:42px; padding:4px; border-radius:10px;
+      cursor:pointer; border:1px solid var(--gray-300); background:#fff;
+    }
+    .color-field input[type="text"] {
+      flex:1; font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;
+    }
+
+    /* Vista previa */
+    .color-preview {
+      border-radius:14px; overflow:hidden; border:1px solid var(--gray-200);
+      background:#fff; margin-top:8px;
+    }
+    .color-preview__header {
+      padding:12px 16px; display:flex; align-items:center; justify-content:space-between;
+      border-bottom:1px solid var(--gray-100);
+    }
+    .color-preview__brand {
+      display:flex; align-items:center; gap:8px; font-weight:800; font-size:.85rem;
+    }
+    .color-preview__mark {
+      width:26px; height:26px; border-radius:8px; display:grid; place-items:center;
+      font-size:.75rem; color:#fff;
+    }
+    .color-preview__search {
+      flex:1; max-width:200px; height:28px; border-radius:999px;
+      background:var(--gray-100); margin:0 12px;
+    }
+    .color-preview__hero {
+      padding:24px 20px; color:#fff;
+    }
+    .color-preview__hero h4 {
+      margin:0 0 6px; font-size:.95rem; letter-spacing:-.01em;
+    }
+    .color-preview__hero p {
+      margin:0 0 12px; font-size:.75rem; opacity:.85;
+    }
+    .color-preview__hero-btn {
+      display:inline-block; padding:6px 14px; border-radius:999px;
+      background:#fff; font-size:.72rem; font-weight:700;
+    }
+    .color-preview__card {
+      padding:12px 16px 16px; display:flex; align-items:center; gap:12px;
+      border-top:1px solid var(--gray-100);
+    }
+    .color-preview__thumb {
+      width:44px; height:44px; border-radius:10px;
+      background:var(--gray-100);
+    }
+    .color-preview__info { flex:1; }
+    .color-preview__title {
+      font-size:.8rem; font-weight:700; margin:0 0 2px;
+    }
+    .color-preview__price {
+      font-size:.72rem; color:var(--gray-500); margin:0;
+    }
+    .color-preview__cat {
+      font-size:.62rem; font-weight:700; letter-spacing:.05em;
+      text-transform:uppercase; margin-bottom:2px;
+    }
 
     @media (max-width:700px) {
       .grid { grid-template-columns:1fr; }
@@ -157,6 +260,7 @@
       .tab { flex:1 0 40%; }
       th:nth-child(2), td:nth-child(2) { display:none; }
       .container { padding:16px 12px 40px; }
+      .color-pickers { grid-template-columns:1fr; }
     }
   </style>
 </head>
@@ -201,6 +305,7 @@
       <button class="tab active" data-tab="productos">Productos</button>
       <button class="tab" data-tab="categorias">Categorías</button>
       <button class="tab" data-tab="apariencia">Apariencia</button>
+      <button class="tab" data-tab="colores">Colores</button>
       <button class="tab" data-tab="config">Tasa BCV</button>
     </div>
 
@@ -253,19 +358,21 @@
       <div class="card">
         <h2>Productos existentes</h2>
         <p class="sub" id="productosCount">—</p>
-        <table>
-          <thead>
-            <tr>
-              <th></th>
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>USD</th>
-              <th>Bs</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="tablaProductos"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>USD</th>
+                <th>Bs</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tablaProductos"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -285,12 +392,14 @@
 
       <div class="card">
         <h2>Categorías existentes</h2>
-        <table>
-          <thead>
-            <tr><th>Nombre</th><th>Productos</th><th></th></tr>
-          </thead>
-          <tbody id="tablaCategorias"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Nombre</th><th>Productos</th><th></th></tr>
+            </thead>
+            <tbody id="tablaCategorias"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -337,6 +446,66 @@
           </div>
           <div class="msg" id="aparienciaMsg"></div>
         </form>
+      </div>
+    </div>
+
+    <!-- COLORES -->
+    <div class="panel" id="panel-colores">
+      <div class="card">
+        <h2>Paleta de colores</h2>
+        <p class="sub">Elige una paleta prediseñada o personaliza tus propios colores.</p>
+
+        <div class="presets" id="presets"></div>
+
+        <div class="color-pickers">
+          <div class="color-field">
+            <label for="colorPrimario">Color principal</label>
+            <div class="color-field__row">
+              <input id="colorPrimario" type="color" value="#2563eb" />
+              <input id="colorPrimarioHex" type="text" maxlength="7" />
+            </div>
+          </div>
+          <div class="color-field">
+            <label for="colorOscuro">Color oscuro (banner, títulos)</label>
+            <div class="color-field__row">
+              <input id="colorOscuro" type="color" value="#1e3a8a" />
+              <input id="colorOscuroHex" type="text" maxlength="7" />
+            </div>
+          </div>
+        </div>
+
+        <h3 style="margin:22px 0 8px;font-size:.95rem">Vista previa</h3>
+        <div class="color-preview" id="colorPreview">
+          <div class="color-preview__header">
+            <div class="color-preview__brand">
+              <span class="color-preview__mark" id="cpMark">M</span>
+              <span id="cpNombre">Mi Negocio</span>
+            </div>
+            <div class="color-preview__search"></div>
+            <div style="width:26px;height:26px;border-radius:999px" id="cpCart"></div>
+          </div>
+          <div class="color-preview__hero" id="cpHero">
+            <h4 id="cpTitulo">Todo lo que necesitas, en un solo lugar</h4>
+            <p>Productos seleccionados y precios actualizados.</p>
+            <span class="color-preview__hero-btn" id="cpHeroBtn" style="color:#1e3a8a">Ver catálogo</span>
+          </div>
+          <div class="color-preview__card">
+            <div class="color-preview__thumb"></div>
+            <div class="color-preview__info">
+              <div class="color-preview__cat" id="cpCat">Categoría</div>
+              <p class="color-preview__title">Producto de ejemplo</p>
+              <p class="color-preview__price">Bs. 1.250,00 · $32,00</p>
+            </div>
+            <div style="padding:6px 14px;border-radius:999px;color:#fff;font-size:.72rem;font-weight:700" id="cpBtn">+ Agregar</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:18px">
+          <button id="btnGuardarColores">Guardar colores</button>
+          <button class="ghost" id="btnResetColores" type="button">Restaurar por defecto</button>
+        </div>
+
+        <div class="msg" id="coloresMsg"></div>
       </div>
     </div>
 
