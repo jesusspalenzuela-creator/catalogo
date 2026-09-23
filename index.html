@@ -123,8 +123,9 @@
     </div>
   </aside>
 
-  <!-- Modal de confirmación -->
+  <!-- Modal de confirmación de pedido -->
   <div id="checkoutOverlay" class="modal-overlay" hidden></div>
+
   <div id="checkoutModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle" hidden>
     <div class="modal__header">
       <div>
@@ -137,7 +138,9 @@
         </svg>
       </button>
     </div>
+
     <div class="modal__body" id="checkoutBody"></div>
+
     <div class="modal__footer">
       <div class="checkout-totals">
         <div class="checkout-totals__row">
@@ -167,6 +170,11 @@
 
   <!-- Modal de zoom de imagen -->
   <div id="imageZoom" class="image-zoom" hidden>
+    <button class="image-zoom__close" id="imageZoomClose" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
+    </button>
     <img id="imageZoomImg" src="" alt="">
   </div>
 
