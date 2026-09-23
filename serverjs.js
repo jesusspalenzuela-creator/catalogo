@@ -22,7 +22,7 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_USER   = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS   = process.env.ADMIN_PASS || 'cambiar_esto';
 const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
-const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
 
 /* ---------------------------------------------------------
    CORS
@@ -127,6 +127,9 @@ function adminAuth(req, res, next) {
   next();
 }
 
+/* ---------------------------------------------------------
+   RATE LIMITING en login
+   --------------------------------------------------------- */
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 8,
@@ -136,7 +139,7 @@ const loginLimiter = rateLimit({
 });
 
 /* ---------------------------------------------------------
-   CONFIGURACIÓN GENERAL (nombre del negocio, hero, etc.)
+   CONFIGURACIÓN GENERAL
    --------------------------------------------------------- */
 async function leerConfig() {
   const { rows } = await pool.query(`SELECT clave, valor FROM configuracion`);
@@ -148,6 +151,8 @@ async function leerConfig() {
     hero_texto:
       map.hero_texto ||
       'Explora nuestro catálogo con productos seleccionados, precios actualizados y envíos a todo el país.',
+    logo_url: map.logo_url || '',
+    whatsapp_number: map.whatsapp_number || '',
     tasa_bcv: parseFloat(map.tasa_bcv || '0') || 0,
   };
 }
@@ -363,7 +368,7 @@ app.get('/api/admin/config', adminAuth, asyncHandler(async (req, res) => {
 }));
 
 app.put('/api/admin/config', adminAuth, asyncHandler(async (req, res) => {
-  const { nombre_negocio, hero_titulo, hero_texto } = req.body || {};
+  const { nombre_negocio, hero_titulo, hero_texto, logo_url, whatsapp_number } = req.body || {};
 
   if (nombre_negocio !== undefined) {
     if (!String(nombre_negocio).trim()) {
@@ -373,6 +378,11 @@ app.put('/api/admin/config', adminAuth, asyncHandler(async (req, res) => {
   }
   if (hero_titulo !== undefined) await guardarConfig('hero_titulo', String(hero_titulo).trim());
   if (hero_texto !== undefined) await guardarConfig('hero_texto', String(hero_texto).trim());
+  if (logo_url !== undefined) await guardarConfig('logo_url', String(logo_url).trim());
+  if (whatsapp_number !== undefined) {
+    const soloDigitos = String(whatsapp_number).replace(/\D/g, '');
+    await guardarConfig('whatsapp_number', soloDigitos);
+  }
 
   const cfg = await leerConfig();
   res.json({ ok: true, ...cfg });
@@ -473,7 +483,7 @@ app.delete('/api/admin/categorias/:id', adminAuth, asyncHandler(async (req, res)
 }));
 
 /* =========================================================
-   ADMIN — TASA
+   ADMIN — TASA BCV
    ========================================================= */
 app.post('/api/admin/tasa/refrescar', adminAuth, asyncHandler(async (req, res) => {
   const tasa = await actualizarTasaBCV();
@@ -523,6 +533,9 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message || 'Error interno' });
 });
 
+/* =========================================================
+   ARRANQUE
+   ========================================================= */
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ API escuchando en http://0.0.0.0:${PORT}`);
   console.log(`   Admin en /admin (usuario: ${ADMIN_USER})`);
